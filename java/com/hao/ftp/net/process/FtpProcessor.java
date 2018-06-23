@@ -11,15 +11,18 @@ import com.hao.ftp.net.Response;
 
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class FtpProcessor implements ProtocolProcessor {
     private Request req;
     private Response response;
     private DefaultDispatcher dispatcher;
+    private Logger logger=Logger.getLogger(FtpProcessor.class.getSimpleName());
+
     public FtpProcessor(){
         dispatcher=DefaultDispatcher.getSingleton();
     }
-
     public Request getReq() {
         return req;
     }
@@ -48,6 +51,8 @@ public class FtpProcessor implements ProtocolProcessor {
         }
 
         createRes(attachment.getOutputBuffer());
+        if(logger.isLoggable(Level.FINE))
+            logger.fine("receive the msg :"+req);
         req.setResponse(response);
         return dispatcher.dispatchReq(req,response);
     }

@@ -7,6 +7,7 @@ import com.hao.ftp.net.protocol.Protocol;
 import java.io.*;
 import java.net.Socket;
 import java.util.Properties;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Server implements LifeCycle{
@@ -15,7 +16,7 @@ public class Server implements LifeCycle{
     private Logger logger=Logger.getLogger(Server.class.getName());
     private Connector connect;
     private Protocol protocol;
-    private String serverBase;
+    private String serverBase;//ftp服务器的根目录
     //private String root;
     public Server(){
         serverBase=System.getProperty("serverBase",System.getProperty("user.dir"));
@@ -24,11 +25,15 @@ public class Server implements LifeCycle{
     }
     @Override
     public void init() throws LifeCycleException{
+        if (logger.isLoggable(Level.INFO))
+            logger.info("ftp server init start");
         if(configLocation==null)
             configLocation=System.getProperty("server.config","conf\\server.properties");
         try {
+            //读取配置文件，初始化属性，初始化connector
             File file=new File(System.getProperty(serverBase), configLocation);
-           // System.out.println(file.exists());
+            if(logger.isLoggable(Level.INFO))
+                logger.info("reading the config file :"+file.getCanonicalPath());
             Reader reader = new FileReader(file);
             config.load(reader);
             System.setProperty(ConfigConstant.ROOT_DIR,config.getProperty(ConfigConstant.ROOT_DIR,"D:\\pdf"));
@@ -41,11 +46,17 @@ public class Server implements LifeCycle{
             logger.warning("server init fail"+e);
             throw new LifeCycleException(e);
         }
+        if (logger.isLoggable(Level.INFO))
+            logger.log(Level.INFO,"ftp server has finished starting");
     }
 
     @Override
     public void start() throws LifeCycleException {
-        connect.start();
+        if (logger.isLoggable(Level.INFO))
+            logger.info("ftp server start");
+        connect.start();//启动connect监听，开始接受服务
+        if (logger.isLoggable(Level.INFO))
+            logger.info("ftp start finished");
     }
 
     @Override
@@ -54,8 +65,6 @@ public class Server implements LifeCycle{
     }
     public static void main(String[] args) throws Exception {
         Server server=new Server();
-        if(args.length>0)
-            configLocation=args[0];
         server.init();
         server.start();
         Thread.sleep(Integer.MAX_VALUE);

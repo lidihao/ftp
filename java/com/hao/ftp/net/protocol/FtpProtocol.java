@@ -15,13 +15,13 @@ import java.nio.channels.SelectionKey;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class FtpProtocol implements Protocol {
     private ConcurrentLinkedQueue<SoftReference<ProtocolProcessor>> processorCache=new ConcurrentLinkedQueue<SoftReference<ProtocolProcessor>>();
     private Map<SelectionKey,ProtocolProcessor> conntections=new HashMap<SelectionKey, ProtocolProcessor>();
     private Logger log=Logger.getLogger(Protocol.class.getName());
-
     public FtpProtocol(){
 
     }
@@ -34,6 +34,8 @@ public class FtpProtocol implements Protocol {
         socketAttachment.init();
         SocketState state;
         try {
+            if(log.isLoggable(Level.FINE))
+                log.fine("protocol process the socket,interest is "+key.interestOps());
             state = protocolProcessor.doProcess(key);
         }catch (ClosedChannelException e){
             log.warning("socket has close,sc="+socketAttachment.getKey().channel());

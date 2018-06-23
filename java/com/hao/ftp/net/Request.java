@@ -56,11 +56,14 @@ public class Request {
             dataTransfer.setResponse(response);
         return dataTransfer;
     }
+
     @Override
     public String toString() {
         return "Request{" +
                 "command='" + command + '\'' +
                 ", reqMsg='" + reqMsg + '\'' +
+                ", userInfo=" + userInfo +
+                ", response=" + response +
                 '}';
     }
 }

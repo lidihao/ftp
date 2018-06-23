@@ -14,5 +14,5 @@ public class ResponseCode{
     public static final int SYNTAX_ERROR=501;
     public static final int CONNECTION_OPEN=125;
     public static final int TRANSFER_SUCCESS=226;
-
+    public static final int COMMAND_FAIL=550;
 }

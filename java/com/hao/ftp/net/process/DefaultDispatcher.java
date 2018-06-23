@@ -50,10 +50,10 @@ public class DefaultDispatcher {
             String className=properties.getProperty(req.getCommand());
             if(className==null){
                 try {
-                res.setCode(ResponseCode.COMMAND_NOT_IMPL);
-                res.setMsg("server don't implements this command");
-                res.flush();
-                return SocketState.READ;
+                    res.setCode(ResponseCode.COMMAND_NOT_IMPL);
+                    res.setMsg("server don't implements this command");
+                    res.flush();
+                    return SocketState.READ;
                 }catch (IOException e){
                     logger.warning("response flush fail "+e);
                     throw new ProcessException(e);

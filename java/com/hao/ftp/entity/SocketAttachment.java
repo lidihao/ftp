@@ -77,6 +77,8 @@ public class SocketAttachment {
                 ", inputBuffer=" + inputBuffer +
                 ", outputBuffer=" + outputBuffer +
                 ", socketConfig=" + socketConfig +
+                ", poller=" + poller +
+                ", key=" + key +
                 '}';
     }
 

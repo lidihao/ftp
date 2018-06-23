@@ -16,6 +16,9 @@ public abstract class LifeCycleBase implements LifeCycle {
         public boolean greatThan(LifeCycleState v){
             return this.ordinal()>v.ordinal();
         }
+        public boolean lessThan(LifeCycleState v){
+            return this.ordinal()<v.ordinal();
+        }
     }
     //保证内存的可见性
     protected volatile LifeCycleState state=LifeCycleState.New;

@@ -24,18 +24,18 @@ public class NioConnector extends LifeCycleBase implements Connector{
 
     private Logger logger=Logger.getLogger(Connector.class.getName());
     private ServerSocketChannel serverSocketChannel;
-    private int port;
-    private InetAddress address; //config
-    private Acceptor[] acceptors; //config
-    private ExecutorService executor; //config
-    private Poller[] pollers;//config
+    private int port;//端口号，默认为21
+    private InetAddress address; //config 绑定地址
+    private Acceptor[] acceptors; //config 接受器，接受请求，注册到Poller
+    private ExecutorService executor; //config 线程池，处理请求的线程
+    private Poller[] pollers;//config 轮询器，处理注册到selector上的请求
     private int acceptorCount; //config
     private int pollerCount; //config
     private AtomicInteger pollerIndex=new AtomicInteger(-1);
     private long selectTimeout=1000;//config
-    private ConcurrentLinkedQueue<SoftReference<SocketAttachment>> socketAttachmentCache=new ConcurrentLinkedQueue<SoftReference<SocketAttachment>>();
+    private ConcurrentLinkedQueue<SoftReference<SocketAttachment>> socketAttachmentCache=new ConcurrentLinkedQueue<SoftReference<SocketAttachment>>();//做一个缓存
     private SocketConfig socketConfig=new SocketConfig();
-    private Protocol protocol;//config
+    private Protocol protocol;//config 协议处理,这里是ftp协议
     private Properties config;
     //-----------executor config------
     private int maxWorkThread=100; //config
@@ -161,7 +161,8 @@ public class NioConnector extends LifeCycleBase implements Connector{
         InetSocketAddress socketAddress=getAddress()==null?new InetSocketAddress(getAddress(),getPort()):new InetSocketAddress(getPort());
         serverSocketChannel.socket().bind(socketAddress,socketConfig.getBacklog());
         serverSocketChannel.configureBlocking(true);//阻塞接收请求
-        logger.info("bind ip"+socketAddress.getAddress()+",bind port"+getPort());
+        if (logger.isLoggable(Level.INFO))
+            logger.info("bind ip :"+socketAddress.getAddress()+",bind port :"+getPort());
     }
 
     public void createExecutor(){
@@ -175,7 +176,7 @@ public class NioConnector extends LifeCycleBase implements Connector{
     public void unbind() throws IOException {
         serverSocketChannel.close();
     }
-
+    //设置各种参数
     protected void initInternal() throws LifeCycleException {
         try {
         String value=null;
@@ -217,10 +218,10 @@ public class NioConnector extends LifeCycleBase implements Connector{
 
     protected void startInternal() throws LifeCycleException {
        try {
-           bind();
-           createExecutor();
-           createAcceptor();
-           createPoller();
+           bind();//绑定端口
+           createExecutor();//创建线程池
+           createAcceptor();//创建接受器
+           createPoller();//创建轮询器
        }catch (Exception e){
            throw new LifeCycleException(e);
        }
@@ -228,7 +229,7 @@ public class NioConnector extends LifeCycleBase implements Connector{
 
     protected void stopInternal() throws LifeCycleException {
         try {
-            getExecutor().shutdown();
+            getExecutor().shutdown();//停止
             unbind();
         }catch (Exception e){
             throw new LifeCycleException(e);
@@ -236,7 +237,7 @@ public class NioConnector extends LifeCycleBase implements Connector{
     }
 
     public boolean isRunning(){
-        return state.greatThan(LifeCycleState.Inited);
+        return state.greatThan(LifeCycleState.Inited)&&state.lessThan(LifeCycleState.Stoping);
     }
     //-------------default method-------------
     void addEventToPoller(SocketChannel sc, int interestEvent){
@@ -245,14 +246,17 @@ public class NioConnector extends LifeCycleBase implements Connector{
         SoftReference<SocketAttachment> ref=socketAttachmentCache.poll();
         SocketAttachment attachment=null;
        if(ref!=null){
-           System.out.println("get a socketAttam from cache");
             attachment=ref.get();
             attachment.setPoller(poller);
+            if(logger.isLoggable(Level.FINE))
+                logger.fine("get attachment from cache :"+attachment);
         }else {
             attachment=new SocketAttachment(socketConfig,poller);
         }
         event.keyAttach=attachment;
         poller.addEvent(event);
+        if(logger.isLoggable(Level.FINE))
+            logger.fine("add event["+event+"] to poller["+poller+"]");
     }
 
     void createPoller() throws IOException {
@@ -286,7 +290,8 @@ public class NioConnector extends LifeCycleBase implements Connector{
             while(isRunning()){
                 try {
                     SocketChannel sc=serverSocketChannel.accept();
-                    logger.info("accept a socket "+sc);
+                    if (logger.isLoggable(Level.FINE))
+                        logger.fine("accept a socket "+sc);
                     sc.configureBlocking(false);
                     addEventToPoller(sc,SelectionKey.OP_WRITE);
                 } catch (IOException e) {
@@ -318,7 +323,8 @@ public class NioConnector extends LifeCycleBase implements Connector{
             SoftReference<SocketAttachment> reference=new SoftReference<SocketAttachment>(socketAttachment);
             socketAttachmentCache.offer(reference);
             try {
-                System.out.println("close socket");
+                if (logger.isLoggable(Level.FINE))
+                    logger.fine("close the socket "+sc);
                 sc.socket().close();
                 sc.close();
             } catch (IOException e) {
@@ -343,6 +349,8 @@ public class NioConnector extends LifeCycleBase implements Connector{
                 }else{
                     logger.warning("socketEvent is null");
                 }
+                if(logger.isLoggable(Level.FINE))
+                    logger.fine("register the socket["+socketEvent.sc+"] to poller["+this+"]");
             }
         }
         void processKey(final SelectionKey key){
@@ -382,6 +390,15 @@ public class NioConnector extends LifeCycleBase implements Connector{
         SocketEvent(SocketChannel sc,int interestEvent){
             this.interestEvent=interestEvent;
             this.sc=sc;
+        }
+
+        @Override
+        public String toString() {
+            return "SocketEvent{" +
+                    "sc=" + sc +
+                    ", keyAttach=" + keyAttach +
+                    ", interestEvent=" + interestEvent +
+                    '}';
         }
     }
     static class DefaultThreadFactory implements ThreadFactory{
