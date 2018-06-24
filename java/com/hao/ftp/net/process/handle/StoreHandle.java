@@ -46,6 +46,8 @@ public class StoreHandle implements CommandHandle {
             while ((len=inputStream.read(buff))!=-1){
                bufferOuputStream.write(buff,0,len);
             }
+            bufferOuputStream.flush();
+            bufferOuputStream.close();
         }
     }
 }
